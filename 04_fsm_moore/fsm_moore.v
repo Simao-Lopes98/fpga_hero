@@ -41,7 +41,6 @@ module fsm_moore (
         end else begin
             clk_cnt <= clk_cnt + 1;
         end
-        
     end
 
     /* State logic */

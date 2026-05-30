@@ -41,6 +41,10 @@ cd {projectfolder} && apio create -b icestick
 7. Edit the generated apio.ini file:
    - Change `top-module = main` to `top-module = {projectname}`
 
+### User preferences
+- Comments on the .v file are done with /* */ format
+- Variables should be snake case (e.g. edit_io)
+
 ### Core Verilog Concepts
 - Modules and instantiation
 - Data types and operators

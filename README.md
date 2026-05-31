@@ -27,22 +27,11 @@ apio                       # View full help
 ```
 ## AI Agent
 
-If using an AI copilot, see **ai_OS/HANDOVER.md** for comprehensive guidance on:
+If using an AI copilot, see **ai_OS/README.md** for comprehensive guidance on:
 - Creating new projects
 - Verilog design help
 - Design patterns and best practices
 - Board-specific configurations
-
-### Creating New Projects
-
-**See ai_OS/HANDOVER.md for detailed workflow.** Quick summary:
-
-1. Create folder: `NN_projectname/`
-2. Add `.pcf` file (pin constraints)
-3. Add `.v` file (Verilog module)
-4. Add `.gitignore` (ignore `_build` and `.DS_Store`)
-5. Run `apio create -b icestick`
-6. Edit `apio.ini` - change `top-module = main` to your module name
 
 ## Documentation & Resources
 - **docs/icestickusermanual.md** - ICEStick user manual (converted from PDF)

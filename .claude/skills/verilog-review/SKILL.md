@@ -49,11 +49,17 @@ Work through these categories. Report findings grouped by severity: **Bugs** (wr
 - Identifiers are `snake_case`.
 - Testbenches named `*_tb.v`; check `$dumpvars`/`$finish` present so `apio sim` produces a VCD.
 
+### 7. Comment grammar & typos
+- Flag spelling mistakes and grammatical errors in log messages (e.g printf(), etc), comments or headers (e.g. the recurring `Oscilator` → `Oscillator`, `chanllenge` → `challenge`, `Continous` → `Continuous`, `FTM` → `FSM`).
+- Check that a comment actually matches the code it describes — a stale or misleading comment (e.g. labelling a `wire` as a "reg") is a finding, not just a typo.
+- Report these under **Style**; quote the exact text and the correction. Don't rewrite working code to fix a comment — just point out the line.
+
 ## Verify against the toolchain
 
 When practical, run `apio build` in the project directory and report synthesis warnings (yosys flags inferred latches and width mismatches). For simulation-checkable logic, suggest or run `apio sim`. Treat yosys/nextpnr warnings as review findings, not noise.
 
 ## Output format
+This should be printed at the end of the report
 
 1. One-line summary (e.g. "2 bugs, 1 risk, 3 style notes").
 2. Findings grouped by severity, each with: `file:line`, what's wrong, *why it matters* (the concept), and a suggested fix.

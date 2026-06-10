@@ -62,7 +62,9 @@ Common mistakes: creating `apio.ini` manually, forgetting to update `top-module`
 
 ## Skills
 
+- **`/new-lesson`** (`.claude/skills/new-lesson/`) — scaffolds a new `NN_projectname/` lesson directory following the strict `ai_OS` workflow (`.pcf`, a stub-only `.v`, `.gitignore`, then `apio create` + `top-module` fix). Use it instead of hand-creating projects so the apio.ini gotchas are handled.
 - **`/verilog-review`** (`.claude/skills/verilog-review/`) — reviews Verilog/FPGA code for this repo: RTL correctness (latches, blocking/non-blocking, sensitivity lists, reset style, clock domains), iCE40HX1K resource fit, `.pcf` pin correctness, and repo conventions. Use it before `apio build`/`apio upload`, when auditing a `.v` file, or pass a project name (e.g. `/verilog-review 06_debounce_counter`). It defaults to reviewing the `git diff` if no target is given, and can optionally run `apio build` to fold yosys/nextpnr warnings into the findings.
+- **`/commit`** (`.claude/skills/commit/`) — analyzes the diff and commits with a simple, plain message (no `Co-Authored-By`/trailer lines). Warns and proposes a split when the diff spans multiple lesson directories or mixes repo-wide changes with project work, so history stays scoped per lesson.
 
 ## Working style for this repo
 

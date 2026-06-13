@@ -1,0 +1,14 @@
+[*] GTKWave display configuration for 'apio sim debounce_tb.v'
+[*] THIS FILE WAS GENERATED AUTOMATICALLY BY APIO.
+[*] DO NOT EDIT IT MANUALLY!
+[*] To customize this file, run 'apio sim debounce_tb.v'
+[*] and save the file from GTKWave.
+
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+
+[*]
+debounce_tb.btn
+debounce_tb.clk
+debounce_tb.dbc
+debounce_tb.i[31:0]
+debounce_tb.SIM_DURATION

@@ -1,0 +1,20 @@
+[*] GTKWave display configuration for 'apio sim memory_tb.v'
+[*] THIS FILE WAS GENERATED AUTOMATICALLY BY APIO.
+[*] DO NOT EDIT IT MANUALLY!
+[*] To customize this file, run 'apio sim memory_tb.v'
+[*] and save the file from GTKWave.
+
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+
+[*]
+memory_tb.clk
+memory_tb.CLK_CYCLE
+memory_tb.DELAY_PER_EDGE
+memory_tb.i[31:0]
+memory_tb.r_addr[3:0]
+memory_tb.r_data[7:0]
+memory_tb.r_en
+memory_tb.SIM_DURATION
+memory_tb.w_addr[3:0]
+memory_tb.w_data[7:0]
+memory_tb.w_en

@@ -1,0 +1,8 @@
+# PCF for the pll module
+
+# Oscilator
+set_io              ref_clk                 21
+
+
+# PMOD I/O
+set_io              clk                     78

@@ -18,6 +18,8 @@ module soc (
     // Not used for now
     assign tx = 0;
 
+    reg [7:0] PC;
+
     // Instruction decoder - see page 130 on docs/riscv-spec-20191213.pdf
     reg [31:0] instr;
     
@@ -51,5 +53,53 @@ module soc (
     wire [31:0] Simm = {{21{instr[31]}}, instr[30:25],instr[11:7]};
     wire [31:0] Bimm = {{20{instr[31]}}, instr[7],instr[30:25],instr[11:8],1'b0};
     wire [31:0] Jimm = {{12{instr[31]}}, instr[19:12],instr[20],instr[30:21],1'b0};
+
+
+    // memory buffer with the instructions
+    reg [31:0] mem [0:8];
+    initial begin
+        PC = 0;
+
+        instr <= 32'b0000000_00000_00000_000_00000_0110011; // NOP
+        
+        // add x1, x0, x0
+        //                    rs2   rs1  add  rd  ALUREG
+        mem[0] = 32'b0000000_00000_00000_000_00001_0110011;
+        // addi x1, x1, 1
+        //             imm         rs1  add  rd   ALUIMM
+        mem[1] = 32'b000000000001_00001_000_00001_0010011;
+        // addi x1, x1, 1
+        //             imm         rs1  add  rd   ALUIMM
+        mem[2] = 32'b000000000001_00001_000_00001_0010011;
+        // addi x1, x1, 1
+        //             imm         rs1  add  rd   ALUIMM
+        mem[3] = 32'b000000000001_00001_000_00001_0010011;
+        // addi x1, x1, 1
+        //             imm         rs1  add  rd   ALUIMM
+        mem[4] = 32'b000000000001_00001_000_00001_0010011;
+        // lw x2,0(x1)
+        //             imm         rs1   w   rd   LOAD
+        mem[5] = 32'b000000000000_00001_010_00010_0000011;
+        // sw x2,0(x1)
+        //             imm   rs2   rs1   w   imm  STORE
+        mem[6] = 32'b000000_00010_00001_010_00000_0100011;
+        
+        // ebreak
+        //                                        SYSTEM
+        mem[7] = 32'b000000000001_00000_000_00000_1110011;
+    end
+
+
+    // Fetch instructions from mem
+    always @(posedge clk) begin
+        if(!reset_p) begin
+            PC <= 0;
+            instr <= 32'b0000000_00000_00000_000_00000_0110011; // NOP
+        end else if(!isSYSTEM) begin
+        instr <= mem[PC];
+        PC <= PC + 1;
+        end
+    end
+    assign led = isSYSTEM ? 31 : {PC[0],isALUreg,isALUimm,isStore,isLoad};
 
 endmodule

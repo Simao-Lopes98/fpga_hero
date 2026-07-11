@@ -1,0 +1,14 @@
+[*] GTKWave display configuration for 'apio sim soc_tb.v'
+[*] THIS FILE WAS GENERATED AUTOMATICALLY BY APIO.
+[*] DO NOT EDIT IT MANUALLY!
+[*] To customize this file, run 'apio sim soc_tb.v'
+[*] and save the file from GTKWave.
+
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+
+[*]
+soc_tb.clk
+soc_tb.DELAY_PER_EDGE
+soc_tb.DELAY_PER_SYCL
+soc_tb.reset
+soc_tb.SIM_DURATION

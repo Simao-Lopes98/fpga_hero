@@ -90,16 +90,55 @@ module soc (
     end
 
 
-    // Fetch instructions from mem
+    // Register Bank
+    reg [31:0]  regBank [0:31];
+    reg [31:0]  rs1;
+    reg [31:0]  rs2;
+    wire [31:0] rd;
+    wire        writeBackEn;
+    assign rd           = 0; // for now
+    assign writeBackEn  = 0;   // for now
+    
+    // FSM states
+    localparam FETCH_INSTR_STATE    = 0;
+    localparam FETCH_REG_STATE      = 1;
+    localparam EXECUTE_STATE        = 2;
+    reg [1:0] state;
+
+    always @(posedge clk or posedge reset_p) begin
+        if (reset_p == 1) begin
+            state <= FETCH_INSTR_STATE;
+        end
+        case (state)
+            FETCH_INSTR_STATE: begin
+                instr <= mem[PC];
+                state <= FETCH_REG_STATE;
+            end
+            FETCH_REG_STATE: begin
+                rs1 <= regBank[rs1Id];
+                rs2 <= regBank[rs2Id];
+                state <= EXECUTE_STATE;
+            end
+            EXECUTE_STATE: begin
+                PC <= PC + 1;
+                state <= FETCH_INSTR_STATE;
+            end
+            default: state <= FETCH_INSTR_STATE;
+        endcase
+    end
+
     always @(posedge clk) begin
-        if(!reset_p) begin
-            PC <= 0;
-            instr <= 32'b0000000_00000_00000_000_00000_0110011; // NOP
-        end else if(!isSYSTEM) begin
-        instr <= mem[PC];
-        PC <= PC + 1;
+        if (writeBackEn && rdId != 0) begin
+            regBank[rdId] <= rd;
         end
     end
+
+    // ALU
+    wire [31:0] aluIn1 = rs1;
+    // Depending on the instr type, aluIn2 can assume rs2 or immideate value
+    wire [31:0] aluIn2 = isALUreg ? rs2 : Iimm;
+    reg  [31:0] aluOut;
+
     assign led = isSYSTEM ? 31 : {PC[0],isALUreg,isALUimm,isStore,isLoad};
 
 endmodule

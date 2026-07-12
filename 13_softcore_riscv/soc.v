@@ -2,7 +2,7 @@
 soc module - a minimal soft RISC-V core running on the ICEStick
 */
 
-`define BENCH
+
 
 module soc (
     input           clk,
@@ -123,6 +123,14 @@ module soc (
     localparam EXECUTE_STATE        = 2'b10;
     reg [1:0] state;
 
+    // Next Programm Counter
+    // When the instr is JAL (Jump and Link) it adds the constant value on Jimm
+    // When the instr is JALR (Jump, Link and Register) it adds the constant value on Iimm a the value of rs1
+    // For any other instruction, increment by 4
+    wire [31:0] nextPC =    isJAL ? PC + Jimm :
+                            isJALR ? PC + Iimm + rs1 :
+                            PC + 4;
+
     always @(posedge clk) begin
         if (reset_p == 1) begin
             state <= FETCH_INSTR_STATE;
@@ -139,7 +147,7 @@ module soc (
             end
             EXECUTE_STATE: begin
                 // Increment by 4 as each RISC-V instr is 4 bytes and memory is layed out byte per byte
-                PC <= PC + 4;
+                PC <= nextPC;
                 state <= FETCH_INSTR_STATE;
             end
             default: state <= FETCH_INSTR_STATE;
@@ -182,8 +190,16 @@ module soc (
             default: aluOut = 0;
         endcase
     end
-    assign writeDataBack    = aluOut;
-    assign writeBackEn      = (state == EXECUTE_STATE && (isALUreg || isALUimm));
+
+    // Value to be stored on a register
+    // We need to save something on a register when:
+    // ALU instruction - Sabe the result of the operation
+    // Jump instruction - Save the register where to fallback to
+    assign writeDataBack    = (isJAL || isJALR) ? (PC + 4) : aluOut;
+    assign writeBackEn      = (state == EXECUTE_STATE && (  isALUreg || 
+                                                            isALUimm || 
+                                                            isJAL || 
+                                                            isJALR));
 
     /* ---------------------------------------------------------------
        REGISTER WRITEBACK

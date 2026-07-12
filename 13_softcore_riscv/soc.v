@@ -2,6 +2,7 @@
 soc module - a minimal soft RISC-V core running on the ICEStick
 */
 
+`define BENCH
 
 module soc (
     input           clk,
@@ -15,7 +16,8 @@ module soc (
     /* ---------------------------------------------------------------
        CLOCK / RESET
        reset_p is the active-high, internal version of the (active-low)
-       board reset input, used to drive the FSM's async reset.
+       board reset input, sampled synchronously at the top of the FSM's
+       posedge clk block to force it back to FETCH_INSTR_STATE.
     --------------------------------------------------------------- */
     wire reset_p;
     assign reset_p = ~reset;
@@ -23,7 +25,37 @@ module soc (
     // Not used for now
     assign tx = 0;
 
-    reg [7:0] PC;
+    reg [31:0] MEM [0:255];
+    reg [31:0] PC;
+
+    /* ---------------------------------------------------------------
+       INSTRUCTION MEMORY
+       Test program hardcoded at init time; fetched one word per
+       FETCH_INSTR_STATE cycle. PC is a byte address (RISC-V convention,
+       needed so branch/jump immediates add to it directly), so MEM
+       -- a word array -- is indexed by PC[31:2].
+       `riscv_assembly.vh` supplies the ADD/ADDI/... assembler tasks
+       used below to populate MEM; it must be `included from inside a
+       module (see its header comment), not compiled as a standalone file.
+    --------------------------------------------------------------- */
+    `include "riscv_assembly.vh"
+    initial begin
+        PC = 0;
+        ADD (x0, x0, x0);
+        ADD (x1, x0, x0);
+        ADDI (x1, x1, 1);
+        ADDI (x1, x1, 1);
+        ADDI (x1, x1, 1);
+        ADDI (x1, x1, 1);
+        ADD (x0,x1,x0);
+        ADD (x2,x1,x0);
+        ADD (x3,x1,x0);
+        SRLI (x3,x3,3);
+        SLLI (x3,x3,31);
+        SRAI (x3,x3,5);
+        SRLI (x1,x3,26);
+        EBREAK();
+    end
 
     /* ---------------------------------------------------------------
        INSTRUCTION DECODER
@@ -66,46 +98,6 @@ module soc (
 
 
     /* ---------------------------------------------------------------
-       INSTRUCTION MEMORY
-       Test program hardcoded at init time; fetched one word per
-       FETCH_INSTR_STATE cycle, indexed by PC.
-    --------------------------------------------------------------- */
-    // memory buffer with the instructions
-    reg [31:0] mem [0:8];
-    initial begin
-        PC = 0;
-
-        instr <= 32'b0000000_00000_00000_000_00000_0110011; // NOP
-        
-        // add x1, x0, x0
-        //                    rs2   rs1  add  rd  ALUREG
-        mem[0] = 32'b0000000_00000_00000_000_00001_0110011;
-        // addi x1, x1, 1
-        //             imm         rs1  add  rd   ALUIMM
-        mem[1] = 32'b000000000001_00001_000_00001_0010011;
-        // addi x1, x1, 1
-        //             imm         rs1  add  rd   ALUIMM
-        mem[2] = 32'b000000000001_00001_000_00001_0010011;
-        // addi x1, x1, 1
-        //             imm         rs1  add  rd   ALUIMM
-        mem[3] = 32'b000000000001_00001_000_00001_0010011;
-        // addi x1, x1, 1
-        //             imm         rs1  add  rd   ALUIMM
-        mem[4] = 32'b000000000001_00001_000_00001_0010011;
-        // lw x2,0(x1)
-        //             imm         rs1   w   rd   LOAD
-        mem[5] = 32'b000000000000_00001_010_00010_0000011;
-        // sw x2,0(x1)
-        //             imm   rs2   rs1   w   imm  STORE
-        mem[6] = 32'b000000_00010_00001_010_00000_0100011;
-        
-        // ebreak
-        //                                        SYSTEM
-        mem[7] = 32'b000000000001_00000_000_00000_1110011;
-    end
-
-
-    /* ---------------------------------------------------------------
        REGISTER BANK
        32 general-purpose registers. rs1/rs2 are latched copies read
        out during FETCH_REG_STATE; writeback happens below, gated by
@@ -120,7 +112,10 @@ module soc (
     /* ---------------------------------------------------------------
        FETCH / DECODE / EXECUTE FSM
        Cycles through: fetch instr from mem -> read rs1/rs2 from the
-       register bank -> execute (ALU runs combinationally, PC advances).
+       register bank -> execute (ALU runs combinationally, PC advances
+       by 4, since PC is a byte address and every instruction is 4
+       bytes wide). Synchronous reset: reset_p forces FETCH_INSTR_STATE
+       on the next clk edge rather than asynchronously.
     --------------------------------------------------------------- */
     // FSM states
     localparam FETCH_INSTR_STATE    = 2'b00;
@@ -128,13 +123,13 @@ module soc (
     localparam EXECUTE_STATE        = 2'b10;
     reg [1:0] state;
 
-    always @(posedge clk or posedge reset_p) begin
+    always @(posedge clk) begin
         if (reset_p == 1) begin
             state <= FETCH_INSTR_STATE;
         end
         case (state)
             FETCH_INSTR_STATE: begin
-                instr <= mem[PC];
+                instr <= MEM[PC[31:2]];
                 state <= FETCH_REG_STATE;
             end
             FETCH_REG_STATE: begin
@@ -143,22 +138,12 @@ module soc (
                 state <= EXECUTE_STATE;
             end
             EXECUTE_STATE: begin
-                PC <= PC + 1;
+                // Increment by 4 as each RISC-V instr is 4 bytes and memory is layed out byte per byte
+                PC <= PC + 4;
                 state <= FETCH_INSTR_STATE;
             end
             default: state <= FETCH_INSTR_STATE;
         endcase
-    end
-
-    /* ---------------------------------------------------------------
-       REGISTER WRITEBACK
-       Commits the ALU result to rd on the cycle after EXECUTE_STATE,
-       whenever the current instruction is one that writes a register.
-    --------------------------------------------------------------- */
-    always @(posedge clk) begin
-        if (writeBackEn && rdId != 0) begin
-            regBank[rdId] <= writeDataBack;
-        end
     end
 
     /* ---------------------------------------------------------------
@@ -199,6 +184,45 @@ module soc (
     end
     assign writeDataBack    = aluOut;
     assign writeBackEn      = (state == EXECUTE_STATE && (isALUreg || isALUimm));
+
+    /* ---------------------------------------------------------------
+       REGISTER WRITEBACK
+       Commits the ALU result to rd on the cycle after EXECUTE_STATE,
+       whenever the current instruction is one that writes a register.
+    --------------------------------------------------------------- */
+    always @(posedge clk) begin
+        if (writeBackEn && rdId != 0) begin
+            regBank[rdId] <= writeDataBack;
+        end
+    end
+
+`ifdef BENCH
+    always @(posedge clk) begin
+        if(state == FETCH_REG_STATE) begin
+            case (1'b1)
+            isALUreg: $display(
+                        "ALUreg rd=%d rs1=%d rs2=%d funct3=%b",
+                        rdId, rs1Id, rs2Id, funct3
+                        );
+            isALUimm: $display(
+                        "ALUimm rd=%d rs1=%d imm=%0d funct3=%b",
+                        rdId, rs1Id, Iimm, funct3
+                        );
+            isBranch: $display("BRANCH");
+            isJAL:    $display("JAL");
+            isJALR:   $display("JALR");
+            isAUIPC:  $display("AUIPC");
+            isLUI:    $display("LUI");	
+            isLoad:   $display("LOAD");
+            isStore:  $display("STORE");
+            isSYSTEM: $display("SYSTEM");
+            endcase 
+            if(isSYSTEM) begin
+                $finish();
+                end
+            end 
+        end
+  `endif
 
     /* ---------------------------------------------------------------
        DEBUG LED OUTPUT

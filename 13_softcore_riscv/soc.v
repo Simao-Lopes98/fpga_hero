@@ -2,7 +2,7 @@
 soc module - a minimal soft RISC-V core running on the ICEStick
 */
 
-
+`define BENCH
 
 module soc (
     input           clk,
@@ -39,12 +39,14 @@ module soc (
        module (see its header comment), not compiled as a standalone file.
     --------------------------------------------------------------- */
     `include "riscv_assembly.vh"
+    integer L0_ = 4;
     initial begin
         PC = 0;
-        ADD (x0, x0, x0);
+        ADDI (x1, x1, 1);
+        Label (L0_);
+        ADDI (x1, x1, 1);
+        JAL (x0, LabelRef(L0_));
         ADD (x1, x0, x0);
-        ADDI (x1, x1, 1);
-        ADDI (x1, x1, 1);
         ADDI (x1, x1, 1);
         ADDI (x1, x1, 1);
         ADD (x0,x1,x0);

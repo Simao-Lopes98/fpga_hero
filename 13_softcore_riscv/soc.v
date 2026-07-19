@@ -2,7 +2,7 @@
 soc module - a minimal soft RISC-V core running on the ICEStick
 */
 
-`define BENCH
+// `define BENCH
 
 module soc (
     input           clk,
@@ -21,6 +21,17 @@ module soc (
     --------------------------------------------------------------- */
     wire reset_p;
     assign reset_p = ~reset;
+
+    // Prescale CLK for hardware run i.e not sim
+    `ifndef BENCH
+    wire sec_clk;
+    clk_sec_pre clk_pre (
+        .clk(clk),
+        .sec_clk (sec_clk)
+    );
+    // Reduce counter to achieve 1/2 secs
+    defparam  clk_pre.COUNTER_SIZE = 3000000;
+    `endif
 
     // For continous assingments
     reg [4:0] LEDs;
@@ -162,7 +173,7 @@ module soc (
                             isJALR ? PC + Iimm + rs1 :
                             PC + 4;
 
-    always @(posedge clk) begin
+    always @(posedge sec_clk) begin
         if (reset_p == 1) begin
             state <= FETCH_INSTR_STATE;
         end
@@ -237,7 +248,7 @@ module soc (
        Commits the ALU result to rd on the cycle after EXECUTE_STATE,
        whenever the current instruction is one that writes a register.
     --------------------------------------------------------------- */
-    always @(posedge clk) begin
+    always @(posedge sec_clk) begin
         if (writeBackEn && rdId != 0) begin
             regBank[rdId] <= writeDataBack;
             

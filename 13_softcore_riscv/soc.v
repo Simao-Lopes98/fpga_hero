@@ -27,6 +27,8 @@ module soc (
 
     reg [31:0] MEM [0:255];
     reg [31:0] PC;
+    
+    localparam REG_BANK_SIZE = 31;
 
     /* ---------------------------------------------------------------
        INSTRUCTION MEMORY
@@ -41,8 +43,9 @@ module soc (
     `include "riscv_assembly.vh"
     integer L0_ = 4;
     initial begin
+        // Initial PC
         PC = 0;
-        ADDI (x1, x1, 1);
+        ADD (x1, x0, x0);
         Label (L0_);
         ADDI (x1, x1, 1);
         JAL (x0, LabelRef(L0_));
@@ -105,7 +108,15 @@ module soc (
        out during FETCH_REG_STATE; writeback happens below, gated by
        writeBackEn (x0 is never written).
     --------------------------------------------------------------- */
-    reg [31:0]  regBank [0:31];
+    reg [31:0]  regBank [0:REG_BANK_SIZE];
+    initial begin
+        integer i = 0;
+        // Define reg bank to zero
+        for (i = 0; i < REG_BANK_SIZE; i++) begin
+            regBank [i] = 0;
+        end
+    end
+
     reg [31:0]  rs1;
     reg [31:0]  rs2;
     wire [31:0] writeDataBack;

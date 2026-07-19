@@ -22,6 +22,10 @@ module soc (
     wire reset_p;
     assign reset_p = ~reset;
 
+    // For continous assingments
+    reg [4:0] LEDs;
+    assign led = LEDs;
+
     // Not used for now
     assign tx = 0;
 
@@ -41,25 +45,18 @@ module soc (
        module (see its header comment), not compiled as a standalone file.
     --------------------------------------------------------------- */
     `include "riscv_assembly.vh"
-    integer L0_ = 4;
+    integer L0_ = 8;
     initial begin
         // Initial PC
         PC = 0;
-        ADD (x1, x0, x0);
-        Label (L0_);
-        ADDI (x1, x1, 1);
-        JAL (x0, LabelRef(L0_));
-        ADD (x1, x0, x0);
-        ADDI (x1, x1, 1);
-        ADDI (x1, x1, 1);
-        ADD (x0,x1,x0);
-        ADD (x2,x1,x0);
-        ADD (x3,x1,x0);
-        SRLI (x3,x3,3);
-        SLLI (x3,x3,31);
-        SRAI (x3,x3,5);
-        SRLI (x1,x3,26);
+        ADD     (x1,x0,x0);
+        ADD     (x2,x0,32);
+        Label   (L0_);
+        ADDI    (x1,x1,1);
+        // Break if NOT equal -> jump to label L0_ which defines the PC after the 2 instructions
+        BNE     (x1,x2,LabelRef(L0_));
         EBREAK();
+        endASM();
     end
 
     /* ---------------------------------------------------------------
@@ -109,8 +106,8 @@ module soc (
        writeBackEn (x0 is never written).
     --------------------------------------------------------------- */
     reg [31:0]  regBank [0:REG_BANK_SIZE];
+    integer i = 0;
     initial begin
-        integer i = 0;
         // Define reg bank to zero
         for (i = 0; i < REG_BANK_SIZE; i++) begin
             regBank [i] = 0;
@@ -136,11 +133,32 @@ module soc (
     localparam EXECUTE_STATE        = 2'b10;
     reg [1:0] state;
 
+    /* ---------------------------------------------------------------
+       BRANCH UNIT
+       Combinationally evaluates the branch condition from rs1/rs2
+       based on funct3, independent of the ALU. Result feeds nextPC
+       (isBranch && takeBranch) to decide whether PC+Bimm is taken.
+    --------------------------------------------------------------- */
+    reg takeBranch;
+    always @(*) begin
+        case (funct3)
+        3'b000: takeBranch = (rs1 == rs2);
+        3'b001: takeBranch = (rs1 != rs2);
+        3'b100: takeBranch = ($signed(rs1) < $signed(rs2));
+        3'b101: takeBranch = ($signed(rs1) >= $signed(rs2));
+        3'b110: takeBranch = (rs1 < rs2);
+        3'b111: takeBranch = (rs1 >= rs2);
+        default: takeBranch = 1'b0;
+        endcase
+    end
+
     // Next Programm Counter
+    // When the instr is branch the avaluation is done, and if true (takeBranch == TRUE), PC takes the BImm
     // When the instr is JAL (Jump and Link) it adds the constant value on Jimm
     // When the instr is JALR (Jump, Link and Register) it adds the constant value on Iimm a the value of rs1
     // For any other instruction, increment by 4
-    wire [31:0] nextPC =    isJAL ? PC + Jimm :
+    wire [31:0] nextPC =    (isBranch && takeBranch) ? PC + Bimm:
+                            isJAL ? PC + Jimm :
                             isJALR ? PC + Iimm + rs1 :
                             PC + 4;
 
@@ -222,6 +240,11 @@ module soc (
     always @(posedge clk) begin
         if (writeBackEn && rdId != 0) begin
             regBank[rdId] <= writeDataBack;
+            
+            // LED OUTPUT. Take the value on x1 and assin it to the LEDs
+            if (rdId == 1) begin
+            LEDs <= writeDataBack;
+            end
         end
     end
 
@@ -252,12 +275,5 @@ module soc (
             end 
         end
   `endif
-
-    /* ---------------------------------------------------------------
-       DEBUG LED OUTPUT
-       All 5 LEDs lit = halted on SYSTEM/ebreak. Otherwise: PC[0] as a
-       fetch heartbeat, plus 4 bits showing the decoded instr type.
-    --------------------------------------------------------------- */
-    assign led = isSYSTEM ? 31 : {PC[0],isALUreg,isALUimm,isStore,isLoad};
 
 endmodule

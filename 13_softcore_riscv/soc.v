@@ -2,7 +2,7 @@
 soc module - a minimal soft RISC-V core running on the ICEStick
 */
 
-// `define BENCH
+`define BENCH
 
 module soc (
     input           clk,
@@ -24,10 +24,10 @@ module soc (
 
     // Prescale CLK for hardware run i.e not sim
     `ifndef BENCH
-    wire sec_clk;
+    wire clk;
     clk_sec_pre clk_pre (
         .clk(clk),
-        .sec_clk (sec_clk)
+        .clk (clk)
     );
     // Reduce counter to achieve 1/2 secs
     defparam  clk_pre.COUNTER_SIZE = 3000000;
@@ -56,16 +56,13 @@ module soc (
        module (see its header comment), not compiled as a standalone file.
     --------------------------------------------------------------- */
     `include "riscv_assembly.vh"
-    integer L0_ = 8;
     initial begin
         // Initial PC
         PC = 0;
-        ADD     (x1,x0,x0);
-        ADD     (x2,x0,32);
-        Label   (L0_);
-        ADDI    (x1,x1,1);
-        // Break if NOT equal -> jump to label L0_ which defines the PC after the 2 instructions
-        BNE     (x1,x2,LabelRef(L0_));
+
+        LUI (x1, 32'b11111111111111111111111111111111);
+        ORI (x1, x1, 32'b11111111111111111111111111111111);
+
         EBREAK();
         endASM();
     end
@@ -173,7 +170,7 @@ module soc (
                             isJALR ? PC + Iimm + rs1 :
                             PC + 4;
 
-    always @(posedge sec_clk) begin
+    always @(posedge clk) begin
         if (reset_p == 1) begin
             state <= FETCH_INSTR_STATE;
         end
@@ -237,25 +234,31 @@ module soc (
     // We need to save something on a register when:
     // ALU instruction - Sabe the result of the operation
     // Jump instruction - Save the register where to fallback to
-    assign writeDataBack    = (isJAL || isJALR) ? (PC + 4) : aluOut;
-    assign writeBackEn      = (state == EXECUTE_STATE && (  isALUreg || 
-                                                            isALUimm || 
-                                                            isJAL || 
-                                                            isJALR));
+    // Load instructions - Save the address in memory
+    // Add Upper Immediate to PC - Save the address in memory PLUS the PC
+    assign writeDataBack    =   (isJAL || isJALR) ? (PC + 4) : 
+                                (isLUI) ? Uimm :
+                                (isAUIPC) ? (PC + Uimm) :
+                                (aluOut);
+    assign writeBackEn      =   (state == EXECUTE_STATE && 
+                                (isALUreg   || 
+                                isALUimm    || 
+                                isJAL       || 
+                                isJALR      ||
+                                isLUI       ||
+                                isAUIPC)
+                                );
+
 
     /* ---------------------------------------------------------------
        REGISTER WRITEBACK
-       Commits the ALU result to rd on the cycle after EXECUTE_STATE,
-       whenever the current instruction is one that writes a register.
+       Commits the result of the instruction to the register bank on the cycle 
+       after EXECUTE_STATE, whenever the current instruction is one that 
+       writes a register.
     --------------------------------------------------------------- */
-    always @(posedge sec_clk) begin
+    always @(posedge clk) begin
         if (writeBackEn && rdId != 0) begin
             regBank[rdId] <= writeDataBack;
-            
-            // LED OUTPUT. Take the value on x1 and assin it to the LEDs
-            if (rdId == 1) begin
-            LEDs <= writeDataBack;
-            end
         end
     end
 

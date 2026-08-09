@@ -4,6 +4,25 @@ Notes and reference material collected while building a small RV32I soft core fo
 the ICEStick (iCE40HX1K). Source of truth: `docs/riscv-spec-20191213.md`
 (RISC-V Unprivileged ISA, v20191213), Chapter 2.
 
+[Follow along guide from Bruno Levy](https://github.com/BrunoLevy/learn-fpga/blob/master/FemtoRV/TUTORIALS/FROM_BLINKER_TO_RISCV/README.md)
+
+## Roadmap
+
+Progress against the *From Blinker to RISC-V* tutorial steps:
+
+- [x] **Step 1 — First blinky**: LED counter (too fast to see without a divider).
+- [x] **Step 2 — Slower blinky**: clock divider to slow the blink to a visible rate.
+- [x] **Step 3 — Blinker loading patterns from ROM**: fetch pre-programmed words from memory sequentially.
+- [x] **Step 4 — Instruction decoder**: split the 32-bit word into opcode / regs / funct / immediates.
+- [x] **Step 5 — Register bank & state machine**: register file + FETCH_INSTR → FETCH_REG → EXECUTE FSM.
+- [x] **Step 6 — ALU**: arithmetic/logic ops driven by funct3/funct7.
+- [x] **Step 7 — Verilog assembler**: in-hardware assembler tasks (`riscv_assembly.vh`) to write test programs.
+- [x] **Step 8 — Jumps**: `JAL` / `JALR`.
+- [x] **Step 9 — Branches**: `BEQ`, `BNE`, `BLT`, `BGE`, `BLTU`, `BGEU`.
+- [x] **Step 10 — LUI and AUIPC**: `Uimm` / `PC + Uimm`.
+- [ ] **Step 11 — Memory in a separate module**: split memory out of `soc.v` into its own module.
+- [ ] **Step 12 — Size optimization**: shrink the core (ALU reuse, circuit-level tricks) to fit comfortably on the HX1K.
+
 ---
 
 ## Instruction encoding variants (R / I / S / B / U / J)

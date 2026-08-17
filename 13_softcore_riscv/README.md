@@ -4,7 +4,7 @@ Notes and reference material collected while building a small RV32I soft core fo
 the ICEStick (iCE40HX1K). Source of truth: `docs/riscv-spec-20191213.md`
 (RISC-V Unprivileged ISA, v20191213), Chapter 2.
 
-[More information on RISC-V register](https://msyksphinz-self.github.io/riscv-isadoc/#_add)
+[More information on RISC-V register](https://msyksphinz-self.github.io/riscv-isadoc/)
 
 [Follow along guide from Bruno Levy](https://github.com/BrunoLevy/learn-fpga/blob/master/FemtoRV/TUTORIALS/FROM_BLINKER_TO_RISCV/README.md)
 
